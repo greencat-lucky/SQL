@@ -1,0 +1,105 @@
+With a as (Select 
+				the_date_transaction::date as the_date_transaction,
+				bu.but_num_business_unit as business_unit,
+				the_to_type,
+				the_order_number,
+				tdt_type_detail,
+				sku.sku_num_sku_r3 as sku,
+				sku.mdl_num_model_r3 as model,
+				sku.mdl_label as model_name,
+				sku.grid_size as grid_size,
+				sku.fam_num_family as fam_num_family,
+				sku.family_label as family_name,
+				sku.brd_type_brand_libelle as brand_type,
+				f_to_tax_in,
+				f_amt_discount,
+				f_qty_item,
+				f_margin_estimate
+	From f_transaction_detail_2021 ftd
+	Inner join history.d_business_unit bu
+		on bu.but_idr_business_unit=ftd.but_idr_business_unit
+	Inner join history.d_sku_clean sku
+		on sku.sku_idr_sku=ftd.sku_idr_sku
+	Where 1=1
+		and f_qty_item<>0
+		and the_transaction_status in ('finished','totaled','shipped')
+		and tdt_item_type='Stock'
+		and ftd.the_date_transaction::date>='2021-02-28' and ftd.the_date_transaction::date<='2022-02-26'
+	Union distinct
+	Select 		the_date_transaction::date as the_date_transaction,
+				bu.but_num_business_unit as business_unit,
+				the_to_type,
+				the_order_number,
+				tdt_type_detail,
+				sku.sku_num_sku_r3 as sku,
+				sku.mdl_num_model_r3 as model,
+				sku.mdl_label as model_name,
+				sku.grid_size as grid_size,
+				sku.fam_num_family as fam_num_family,
+				sku.family_label as family_name,
+				sku.brd_type_brand_libelle as brand_type,
+				f_to_tax_in,
+				f_amt_discount,
+				f_qty_item,
+				f_margin_estimate
+	From f_transaction_detail_2022 ftd
+	Inner join history.d_business_unit bu
+		on bu.but_idr_business_unit=ftd.but_idr_business_unit
+	Inner join history.d_sku_clean sku
+		on sku.sku_idr_sku=ftd.sku_idr_sku
+	Where 1=1
+	and f_qty_item<>0
+	and the_transaction_status in ('finished','totaled','shipped')
+	and tdt_item_type='Stock'
+	and ftd.the_date_transaction::date>='2021-02-28' and ftd.the_date_transaction::date<='2022-02-26')
+	Select d.wee_id_week as week_id,
+	case when empty(b2b.macro_channel)=0 then 'B2B' else 
+		(case when a.business_unit=112 then 'ecom'
+		when a.business_unit in (245,246,253,254) then 'marketplace'
+		else 'offline' end)
+							end as channel,
+	a.business_unit as business_unit,
+	dsn.but_name_business_unit as bu_name,
+	a.tdt_type_detail as trans_type,
+	a.sku as sku_number,
+	a.model as model_number,
+	a.model_name as model_name,
+	a.grid_size as grid_size,
+	a.fam_num_family as fam_num_family,
+	a.family_name as family_name,
+	univ.unv_name_eng_dmi as universe,
+	a.brand_type as brand_type,
+	round(sum(a.f_to_tax_in),0) as to_sum,
+	round(sum(case when a.tdt_type_detail='return' then -abs(a.f_amt_discount) else a.f_amt_discount end),0) as spd_sum,
+	sum(a.f_qty_item) as qty_sum,
+	round(sum(a.f_margin_estimate),0) as margin_sum,
+	avg(short.shortage_rate) as shortage_rate
+	From a
+Left join (Select order_id,
+	macro_channel
+	From ecom_bi_final ebf 
+	Where channel='B2B'
+	and payment_date>='2021-02-28' and payment_date<='2022-02-26'
+	and order_status='ORDER_COMPLETED'
+	Group by 1,2) as b2b
+	on b2b.order_id=a.the_order_number
+Left join history.d_univers_dmi univ
+	on univ.fam_num_family=a.fam_num_family
+Left join history.d_store_new dsn
+	on dsn.but_num_business_unit=a.business_unit
+Inner join history.d_day d
+		on d.day_id_day=a.the_date_transaction
+Left join (Select d.wee_id_week as week_id,
+		ss.business_unit,
+		ss.sku_num_sku_r3 as article,
+		round(sum(shortage_store)/(7),2) as shortage_rate
+	From shortage_sku_2021_2022 ss
+	Inner join history.d_day d
+		on d.day_id_day=ss.report_date
+	Where d.wee_id_week>=202109 and d.wee_id_week<=202208
+	Group by 1,2,3) as short
+	on short.week_id=d.wee_id_week
+	and short.article=a.sku
+	and short.business_unit=a.business_unit
+Where 1=1
+Group by 1,2,3,4,5,6,7,8,9,10,11,12,13;
