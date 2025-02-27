@@ -67,4 +67,4 @@ SELECT date_part('week'::text, op.datecreate) AS week_num,
                   GROUP BY date_part('week'::text, op_1.datecreate), op_1.id) a
           GROUP BY a.week_num) d ON d.week_num = date_part('week'::text, op.datecreate)
   WHERE op.datecreate > '2024-01-01 00:00:00'::timestamp without time zone AND op.checkstatus = 0 AND p.item <> '00-00033565'::text AND op.datecreate::date < 'today'::text::date AND (p.item <> ALL (ARRAY['00-00032263'::text, '00-00032131'::text])) AND date_part('week'::text, op.datecreate) = (date_part('week'::text, 'now'::text::date) - 1::double precision) AND (pt.dec_producttype <> ALL (ARRAY['НЕГАЗИРОВАННАЯ ВОДА'::text, 'ГАЗИРОВАННАЯ ВОДА'::text, 'ВОДА'::text, 'ПРОТЕИНОВЫЙ СНЕК'::text, 'НАПИТОК'::text, 'ПРОТЕИНОВОЕ ПЕЧЕНЬЕ'::text, 'ПРОТЕИНОВЫЙ БАТОНЧИК'::text, 'ИЗОТОНИК'::text, 'БАТОНЧИК'::text]))
-  GROUP BY date_part('week'::text, op.datecreate), sr.business_region, os.shopindex, dsn.shop_name_ru, pt.modelname, b.ranking, c.check_nums, c.avg_num, d.total_checks, d.avg_num_items;
+  GROUP BY 1,2,3,4,5,6,7,8,9,10;
